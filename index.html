@@ -1,0 +1,167 @@
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+<script src="https://unpkg.com/vue-chartjs/dist/vue-chartjs.min.js"></script>
+<script type="text/javascript" src="https://github.com/nagix/chartjs-plugin-colorschemes/releases/download/v0.2.0/chartjs-plugin-colorschemes.min.js"></script>
+</head>
+
+
+<body>
+  <div id="app">
+    <input type="file" @change="loadCsvFile" /><br>
+    患者数： {{sum}} <br>
+     男性：  {{men_patient.length}} <br>
+     女性：  {{women_patient.length}} <br>
+     <input type="checkbox" id="men" value="men" v-model="menChecked" v-on:change="changeMenBox">
+    <label for="jack">男性</label>
+    <input type="checkbox" id="women" value="women" v-model="womenChecked" v-on:change="changeWomenBox">
+    <label for="women">女性</label>
+    <canvas id="myChart"></canvas>
+  </div>
+
+  <script>
+    var app = new Vue({
+      el: '#app',
+      mounted: function(){
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: this.date_patients,
+            datasets: [{
+              label: 'コロナ感染者数の遷移',
+              data: this.date_patients
+            }]
+          }
+        });
+      },
+      data: {
+        patients: [],
+        date_list : [],
+        sum: 0,
+        men_patient: [],
+        women_patient: [],
+        date_patients: [],
+        menChecked:true,
+        womenChecked:true,
+      },
+      methods: {
+        changeMenBox: function(e) {
+          console.log(myChart.datasets)
+          var targetData = {
+                labels: this.date_list,
+                datasets: [{
+                  label: '変更後',
+                  data: this.men_patients
+                }]
+              };
+          drawChart(targetData)
+        },
+        changeWomenBox: function(e) {
+          console.log(myChart)
+        },
+        loadCsvFile: function(e) {
+          let vm = this;
+          vm.patients = [];
+          vm.message = "";
+          let file = e.target.files[0];
+ 
+          if (!file.type.match("text/csv")) {
+            vm.message = "CSVファイルを選択してください";
+            return;
+          }
+ 
+          let reader = new FileReader();
+          reader.readAsText(file);
+ 
+          reader.onload = () => {
+            let lines = reader.result.split("\n");
+            lines.shift();
+            let linesArr = [];
+            for (let i = 0; i < lines.length; i++) {
+              linesArr[i] = lines[i].split(",");
+            }
+            vm.patients = linesArr;
+            vm.sum = sumPatients(linesArr);
+            let {x, y} = timeList(linesArr);
+            vm.date_list = x;
+            vm.date_patients = y;
+
+            vm.men_patient = sumSexPatients(linesArr, x, '男性');
+            vm.women_patient = sumSexPatients(linesArr, x, '女性');
+            
+            var targetData = {
+              labels: this.date_list,
+              datasets: [{
+                label: '四半期の売上数の遷移',
+                data: this.date_patients
+              }]
+            };
+            drawChart(targetData)
+          };
+        }
+      }
+    });
+
+    function drawChart(targetData) {
+      var ctx = document.getElementById('myChart').getContext('2d');
+      var myChart = new Chart(ctx, {
+              type: 'line',
+              data: targetData,
+              options:{
+                plugins: {
+                  colorschemes: {
+                    scheme: 'brewer.Paired12'
+                  }
+                }
+              }
+            });
+    }
+
+    function sumPatients(data) {
+      return data.length
+    }
+
+    function sumSexPatients(data, date_list, sex) {
+      sum_list = [];
+      for (var date of date_list) {
+        sum = 0;
+        for (var i=0,len=data.length;i<len;++i) {
+          if (data[i][4] == date && data[i][9] == sex) {
+            sum++;
+          }
+        }
+        sum_list.push(sum)
+      }
+      return sum_list
+    }
+
+    function timeList(data) {
+      labels = [];
+      for (var i=0,len=data.length;i<len;++i) {
+        labels.push(data[i][4]);
+      }
+      date_set = new Set(labels)
+      sum_list = [];
+      for (var date of date_set){
+        sum = 0;
+        for (var i=0,len=data.length;i<len;++i) {
+          if (data[i][4] == date) {
+            sum++;
+          }
+        }
+        sum_list.push(sum)
+      }
+      return {x:Array.from(date_set), y:sum_list}
+    }
+
+
+
+  </script>
+
+
+  </body>
+</html>
